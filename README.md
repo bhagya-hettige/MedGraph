@@ -1,4 +1,4 @@
-# MedGraph
+# MedGraph: Structural and Temporal Representation Learning of Electronic Medical Records
 
 Input data format for MedGraph
 -
