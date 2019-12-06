@@ -3,7 +3,7 @@
 Input data format for MedGraph
 -
 
-MedGraph expects a numpy compressed file with the following elements:
+MedGraph expects a numpy compressed file (`.npz`) with the following elements:
 
 - Mapping dictionaries for node identifier and index in the VC and VV graphs of training, validation and test sets: `ent2vtx_train`, `ent2vtx_valid` & `ent2vtx_test`
 - Adjacency matrix of VC structural relations in the training set: `A_vc`
