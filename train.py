@@ -30,7 +30,7 @@ def train(args):
     np.random.RandomState(46)
 
     # Load the data into MedGraph data structure
-    graph_file = '/Users/bhagya/PycharmProjects/MedGraph/data/%s/%s.npz' % (args.dataset, args.dataset)
+    graph_file = 'data/%s/%s.npz' % (args.dataset, args.dataset)
     data_loader = DataLoader(graph_file)
 
     display_freq = 10  # Frequency of displaying the training results
