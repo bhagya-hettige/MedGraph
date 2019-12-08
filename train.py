@@ -30,7 +30,7 @@ def train(args):
     np.random.RandomState(46)
 
     # Load the data into MedGraph data structure
-    graph_file = 'data/%s/%s.npz' % (args.dataset, args.dataset)
+    graph_file = 'data/%s.npz' % args.dataset
     data_loader = DataLoader(graph_file)
 
     display_freq = 10  # Frequency of displaying the training results
@@ -116,12 +116,12 @@ def train(args):
             # Save visit and code embeddings for test data (we use the same mapping dictionary)
             if args.is_gauss:
                 mu, sigma = sess.run([model.embedding, model.sigma], feed_dict=feed_dict_test)
-                np.save('emb/%s_embedding.pkl' % args.dataset,
+                np.save('emb/%s_embedding.npy' % args.dataset,
                         {'mu': data_loader.embedding_mapping(mu),
                          'sigma': data_loader.embedding_mapping(sigma)})
             else:
                 mu = sess.run(model.embedding, feed_dict=feed_dict_test)
-                np.save('emb/%s_embedding.pkl' % args.dataset, data_loader.embedding_mapping(mu))
+                np.save('emb/%s_embedding.npy' % args.dataset, data_loader.embedding_mapping(mu))
 
             print('---------------------------------------------------------')
             print(

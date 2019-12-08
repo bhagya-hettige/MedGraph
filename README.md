@@ -2,7 +2,7 @@
 
 ## Input data format for MedGraph
 
-MedGraph expects a numpy compressed file (`.npz`) with the following elements:
+MedGraph expects a numpy compressed file (`.npz`) with the following elements in `data` directory:
 
 * Mapping dictionaries for node identifier and index in the VC and VV graphs of training, validation and test sets: `ent2vtx_train`, `ent2vtx_valid` & `ent2vtx_test`
 * Adjacency matrix of VC structural relations in the training set: `A_vc`
@@ -17,11 +17,13 @@ Have a look at the `utils.py` file for more details.
 MedGraph can be trained for either a predictive healthcare task to output future medical risks or an unsupervised model to obtain visit and code embeddings.
 
 ### System requirements
+
 * [Python 3.6](https://www.python.org)
 * [Tensorflow 1.14](https://www.tensorflow.org)
 * [NetworkX 2.3](https://networkx.github.io)
 
 ### Running MedGraph script
+
 ```
 python train.py dataset --embedding_dim=128 --vc_batch_size=128 --vv_batch_size=32 --K=10 --num_epochs=10 --learning_rate=0.001 --is_gauss=True --distance=w2 --is_time_dis=True
 ```
@@ -35,6 +37,10 @@ python train.py dataset --embedding_dim=128 --vc_batch_size=128 --vv_batch_size=
 * `is_gauss`: if `True` MedGraph learns Gaussian embeddings for visits and codes, or if `False` MedGraph produces point vector embeddings
 * `distance`: if we represent visits and codes as Gaussians, we can define either `w2` (2-nd Wasserstein distance) or `kl` (symmetric KL divergence) as the distance measure
 * `is_time_dis`: if `True` MedGraph makes predictions at each time step of the visit sequence, or if `False` MedGraph makes predictions at the last time step of the visit sequence
+
+### MedGraph embeddings
+
+Visit and code embeddings of MedGraph are saved in `emb` folder.
 
 ## 2-D visualisation of the code embeddings learned from MedGraph
 
