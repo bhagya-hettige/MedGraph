@@ -15,14 +15,12 @@ class DataLoader:
             # vc node attributes
             self.X_visits_train = sp.csr_matrix((loader['visit_attr_data'], loader['visit_attr_indices'],
                                                  loader['visit_attr_indptr']), shape=loader['visit_attr_shape'])
-            self.X_codes_train = sp.csr_matrix((loader['code_attr_data'], loader['code_attr_indices'],
-                                                loader['code_attr_indptr']), shape=loader['code_attr_shape'])
+            self.X_codes = sp.csr_matrix((loader['code_attr_data'], loader['code_attr_indices'],
+                                          loader['code_attr_indptr']), shape=loader['code_attr_shape'])
             self.X_visits_val = sp.csr_matrix((loader['attr_data_val'], loader['attr_indices_val'],
                                                loader['attr_indptr_val']), shape=loader['attr_shape_val'])
             self.X_visits_test = sp.csr_matrix((loader['attr_data_test'], loader['attr_indices_test'],
                                                 loader['attr_indptr_test']), shape=loader['attr_shape_test'])
-            self.n_visits_valid = self.X_visits_val.shape[0]
-            self.n_visits_test = self.X_visits_test.shape[0]
 
             # vv sequences
             self.vv_train = loader['vv_train']
@@ -30,7 +28,7 @@ class DataLoader:
             self.vv_test = loader['vv_test']
 
             # Get mapping dictionaries for nodes
-            self.ent2vtx = loader['ent2vtx'].item()
+            self.ent2vtx_train = loader['ent2vtx_train'].item()
             self.ent2vtx_valid = loader['ent2vtx_valid'].item()
             self.ent2vtx_test = loader['ent2vtx_test'].item()
 
@@ -43,15 +41,14 @@ class DataLoader:
     def __process_vc_graph(self):
         self.vc_graph = nx.from_scipy_sparse_matrix(self.A)
 
-        self.edges = self.vc_graph.edges(data=False)
-        self.nodes = self.vc_graph.nodes(data=True)
+        self.edges = list(self.vc_graph.edges(data=False))
+        self.nodes = list(self.vc_graph.nodes(data=True))
 
         self.edge_distribution = np.ones(self.vc_graph.number_of_edges())
         self.edge_distribution /= np.sum(self.edge_distribution)
         self.edge_sampling = AliasSampling(prob=self.edge_distribution)
-        self.node_negative_distribution = np.power(np.array([self.vc_graph.degree(node)
-                                                             for node in self.vc_graph.nodes()], dtype=np.float32),
-                                                   0.75)
+        self.node_negative_distribution = np.power(
+            np.array([self.vc_graph.degree(node) for node in self.vc_graph.nodes()], dtype=np.float32), 0.75)
         self.node_negative_distribution /= np.sum(self.node_negative_distribution)
         self.node_sampling = AliasSampling(prob=self.node_negative_distribution)
 
@@ -59,48 +56,55 @@ class DataLoader:
         max_seq_train = max([len(x) for x in self.vv_train])
         max_seq_valid = max([len(x) for x in self.vv_valid])
         max_seq_test = max([len(x) for x in self.vv_test])
+        self.n_classes = np.max(self.vv_train[:, 3]) + 1
 
-        vv_inputs = []
+        vv_inputs = np.empty((len(self.vv_train), max_seq_train))
         vv_outputs = []
-        vv_in_time = []
-        vv_out_time = []
-        output_mask = []
-        for x in self.vv_train:
-            vv_inputs.append(np.pad(x[:, 0], (0, max_seq_train - len(x)), 'constant', constant_values=0))
-            vv_outputs.append(x[:, 3])
-            vv_in_time.append(np.pad(x[:, 1], (0, max_seq_train - len(x)), 'constant', constant_values=-1))
-            vv_out_time.append(np.pad(x[:, 2], (0, max_seq_train - len(x)), 'constant', constant_values=0))
-            output_mask.append(np.pad([idx + 1 for idx in range(len(x))], (0, max_seq_train - len(x)),
-                                      'constant', constant_values=0))
-        self.vv_train_seq = [vv_inputs, vv_in_time, vv_out_time, output_mask, vv_outputs]
+        vv_in_time = np.empty((len(self.vv_train), max_seq_train))
+        vv_out_time = np.empty((len(self.vv_train), max_seq_train))
+        output_mask = np.empty((len(self.vv_train), max_seq_train))
+        for i, x in enumerate(self.vv_train):
+            x = np.array([np.array(y) for y in x])
+            vv_inputs[i] = np.pad(x[:, 0], (0, max_seq_train - len(x)), 'constant', constant_values=0)
+            vv_outputs.append(np.eye(self.n_classes)[x[:, 3].astype(np.int)])
+            vv_in_time[i] = np.pad(x[:, 1], (0, max_seq_train - len(x)), 'constant', constant_values=-1)
+            vv_out_time[i] = np.pad(x[:, 2], (0, max_seq_train - len(x)), 'constant', constant_values=0)
+            output_mask[i] = np.pad([idx + 1 for idx in range(len(x))], (0, max_seq_train - len(x)), 'constant',
+                                    constant_values=0)
+        self.vv_train_seq = [vv_inputs, vv_in_time, vv_out_time, output_mask.reshape([-1, max_seq_train, 1]),
+                             np.asarray(vv_outputs)]
 
-        vv_inputs_valid = []
+        vv_inputs_valid = np.empty((len(self.vv_valid), max_seq_valid))
         vv_outputs_valid = []
-        vv_in_time_valid = []
-        vv_out_time_valid = []
-        output_mask_valid = []
-        for x in self.vv_valid:
-            vv_inputs_valid.append(np.pad(x[:, 0], (0, max_seq_valid - len(x)), 'constant', constant_values=0))
-            vv_outputs_valid.extend(x[:, 3])
-            vv_in_time_valid.append(np.pad(x[:, 1], (0, max_seq_valid - len(x)), 'constant', constant_values=-1))
-            vv_out_time_valid.append(np.pad(x[:, 2], (0, max_seq_valid - len(x)), 'constant', constant_values=0))
-            output_mask_valid.append(np.pad([idx + 1 for idx in range(len(x))], (0, max_seq_valid - len(x)),
-                                            'constant', constant_values=0))
-        self.vv_valid_seq = [vv_inputs_valid, vv_in_time_valid, vv_out_time_valid, output_mask_valid, vv_outputs_valid]
+        vv_in_time_valid = np.empty((len(self.vv_valid), max_seq_valid))
+        vv_out_time_valid = np.empty((len(self.vv_valid), max_seq_valid))
+        output_mask_valid = np.empty((len(self.vv_valid), max_seq_valid))
+        for i, x in enumerate(self.vv_valid):
+            x = np.array([np.array(y) for y in x])
+            vv_inputs_valid[i] = np.pad(x[:, 0], (0, max_seq_valid - len(x)), 'constant', constant_values=0)
+            vv_outputs_valid.extend(np.eye(self.n_classes)[x[:, 3].astype(np.int)])
+            vv_in_time_valid[i] = np.pad(x[:, 1], (0, max_seq_valid - len(x)), 'constant', constant_values=-1)
+            vv_out_time_valid[i] = np.pad(x[:, 2], (0, max_seq_valid - len(x)), 'constant', constant_values=0)
+            output_mask_valid[i] = np.pad([idx + 1 for idx in range(len(x))], (0, max_seq_valid - len(x)), 'constant',
+                                          constant_values=0)
+        self.vv_valid_seq = [vv_inputs_valid, vv_in_time_valid, vv_out_time_valid,
+                             output_mask_valid.reshape([-1, max_seq_valid, 1]), np.asarray(vv_outputs_valid)]
 
-        vv_inputs_test = []
+        vv_inputs_test = np.empty((len(self.vv_test), max_seq_test))
         vv_outputs_test = []
-        vv_in_time_test = []
-        vv_out_time_test = []
-        output_mask_test = []
-        for x in self.vv_test:
-            vv_inputs_test.append(np.pad(x[:, 0], (0, max_seq_test - len(x)), 'constant', constant_values=0))
-            vv_outputs_test.extend(x[:, 3])
-            vv_in_time_test.append(np.pad(x[:, 1], (0, max_seq_test - len(x)), 'constant', constant_values=-1))
-            vv_out_time_test.append(np.pad(x[:, 2], (0, max_seq_test - len(x)), 'constant', constant_values=0))
-            output_mask_test.append(np.pad([idx + 1 for idx in range(len(x))], (0, max_seq_test - len(x)),
-                                           'constant', constant_values=0))
-        self.vv_test_seq = [vv_inputs_test, vv_in_time_test, vv_out_time_test, output_mask_test, vv_outputs_test]
+        vv_in_time_test = np.empty((len(self.vv_test), max_seq_test))
+        vv_out_time_test = np.empty((len(self.vv_test), max_seq_test))
+        output_mask_test = np.empty((len(self.vv_test), max_seq_test))
+        for i, x in enumerate(self.vv_test):
+            x = np.array([np.array(y) for y in x])
+            vv_inputs_test[i] = np.pad(x[:, 0], (0, max_seq_test - len(x)), 'constant', constant_values=0)
+            vv_outputs_test.extend(np.eye(self.n_classes)[x[:, 3].astype(np.int)])
+            vv_in_time_test[i] = np.pad(x[:, 1], (0, max_seq_test - len(x)), 'constant', constant_values=-1)
+            vv_out_time_test[i] = np.pad(x[:, 2], (0, max_seq_test - len(x)), 'constant', constant_values=0)
+            output_mask_test[i] = np.pad([idx + 1 for idx in range(len(x))], (0, max_seq_test - len(x)), 'constant',
+                                         constant_values=0)
+        self.vv_test_seq = [vv_inputs_test, vv_in_time_test, vv_out_time_test,
+                            output_mask_test.reshape([-1, max_seq_test, 1]), np.asarray(vv_outputs_test)]
 
     def fetch_vc_batch(self, batch_size=16, K=5):
         edge_batch_index = self.edge_sampling.sampling(batch_size)
@@ -138,7 +142,7 @@ class DataLoader:
         return (batch_vv_inputs, batch_time_train_in, batch_time_train_out, batch_out_mask, batch_vv_outputs)
 
     def randomize_vv_sequences(self, data):
-        permutation = np.random.permutation(data[0].shape[0])
+        permutation = np.random.permutation(len(data[0]))
         shuffled_data = [
             data[0][permutation, :],
             data[1][permutation, :],
@@ -166,7 +170,7 @@ class DataLoader:
         return shuffled_data
 
     def embedding_mapping(self, embedding):
-        return {node: embedding[self.node_index[node]] for node, _ in self.nodes_raw}
+        return {node: embedding[self.node_index[node]] for node, _ in self.nodes}
 
 
 def sparse_feeder(M):

@@ -6,13 +6,13 @@ seed = 46
 
 
 class MedGraph:
-    def __init__(self, dataLoader):
+    def __init__(self, data_loader):
         # Hyperparameters
-        alpha = 1
-        beta = 1
-        gamma = 1
+        alpha = 1.0
+        beta = 1.0
+        gamma = 1.0
 
-        # Seed for reproducibility
+        # Set seed for reproducibility
         tf.set_random_seed(seed)
         np.random.seed(seed)
 
@@ -21,51 +21,52 @@ class MedGraph:
         self.FLOAT_TYPE = tf.float32
 
         # Parameter dimensions
-        self.N_visits, self.D_visits = dataLoader.X1.shape
-        self.N_codes, self.D_codes = dataLoader.X2.shape
-        self.sizes = [self.D_visits, self.D_codes]
-        self.L = dataLoader.embedding_dim
+        D_v = data_loader.X_visits_train.shape[1]
+        D_c = data_loader.X_codes.shape[1]
+        self.sizes = [D_v, D_c]
+        self.L = data_loader.embedding_dim
+        self.n_classes = data_loader.n_classes
         self.n_hidden = [512]
         self.rnn_hidden = [128]
 
         self.X_visits = tf.sparse_placeholder(name='X_visits', dtype=self.FLOAT_TYPE)
-        self.X = [self.X_visits, tf.SparseTensor(*sparse_feeder(dataLoader.X_codes))]
+        self.X = [self.X_visits, tf.SparseTensor(*sparse_feeder(data_loader.X_codes))]
 
         self.alpha = tf.placeholder(name='alpha', dtype=self.FLOAT_TYPE)
         self.learning_rate = tf.placeholder(name='learning_rate', dtype=self.FLOAT_TYPE)
 
         # v-c graph
         self.vc_u_i = tf.placeholder(name='vc_u_i', dtype=self.INT_TYPE,
-                                     shape=[dataLoader.batch_size_vc * (dataLoader.K + 1)])
+                                     shape=[data_loader.vc_batch_size * (data_loader.K + 1)])
         self.vc_u_j = tf.placeholder(name='vc_u_j', dtype=self.INT_TYPE,
-                                     shape=[dataLoader.batch_size_vc * (dataLoader.K + 1)])
+                                     shape=[data_loader.vc_batch_size * (data_loader.K + 1)])
         self.vc_label = tf.placeholder(name='vc_label', dtype=self.FLOAT_TYPE,
-                                       shape=[dataLoader.batch_size_vc * (dataLoader.K + 1)])
+                                       shape=[data_loader.vc_batch_size * (data_loader.K + 1)])
 
         # v->v sequences
         self.vv_in_time = tf.placeholder(name='vv_in_time', dtype=self.FLOAT_TYPE, shape=[None, None])
         self.vv_out_time = tf.placeholder(name='vv_out_time', dtype=self.FLOAT_TYPE, shape=[None, None])
         self.vv_out_mask = tf.placeholder(name='vv_out_mask', dtype=self.INT_TYPE, shape=[None, None, 1])
-        self.vv_inputs = tf.placeholder(name='vv_inputs', dtype=self.INT_TYPE, shape=(None, None))
-        self.vv_outputs = tf.placeholder(name='vv_outputs', dtype=self.FLOAT_TYPE, shape=(None, None))
+        self.vv_inputs = tf.placeholder(name='vv_inputs', dtype=self.INT_TYPE, shape=[None, None])
+        self.vv_outputs = tf.placeholder(name='vv_outputs', dtype=self.FLOAT_TYPE, shape=[None, None])
 
         # Create model architecture
         self.__create_model()
 
-        L_struc = self.structural_loss_gauss(self.vc_u_i, self.vc_u_j, self.vc_label, dataLoader.distance) \
-            if dataLoader.is_gauss else self.structural_loss_inner(self.vc_u_i, self.vc_u_j, self.vc_label)
+        L_struc = self.structural_loss_gauss(self.vc_u_i, self.vc_u_j, self.vc_label, data_loader.distance) \
+            if data_loader.is_gauss else self.structural_loss_inner(self.vc_u_i, self.vc_u_j, self.vc_label)
 
         L_reg = tf.reduce_mean(
             -0.5 * tf.reduce_sum(1 + self.sigma[0] - tf.square(self.embedding[0]) - tf.exp(self.sigma[0]), axis=1)) + \
                 tf.reduce_mean(-0.5 * tf.reduce_sum(
                     1 + self.sigma[1] - tf.square(self.embedding[1]) - tf.exp(self.sigma[1]), axis=1)) \
-            if dataLoader.is_gauss else 0
+            if data_loader.is_gauss else 0
 
-        L_temp, L_aux = self.__temporal_loss(dataLoader.is_gauss, dataLoader.is_time_dis)
+        L_temp, L_aux = self.__temporal_loss(data_loader.is_gauss, data_loader.is_time_dis)
 
         self.loss = alpha * L_struc + beta * 1e-4 * L_temp + gamma * L_aux + 1e-5 * L_reg
 
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=dataLoader.learning_rate)
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=data_loader.learning_rate)
         self.train_op = self.optimizer.minimize(self.loss)
 
     def __create_model(self):
@@ -117,7 +118,6 @@ class MedGraph:
         return loss
 
     def __temporal_loss(self, is_gauss=True, is_time_dis=True):
-        n_classes = tf.shape(self.vv_outputs)[1]
         batch_size = tf.shape(self.vv_in_time)[0]
 
         # Mask for variable length visit sequences
@@ -154,20 +154,21 @@ class MedGraph:
 
         # Get RNN outputs for the visit sequences
         rnn_outputs, _ = tf.nn.dynamic_rnn(cell, guessed_z, dtype=self.FLOAT_TYPE,
-                                           sequence_length=self._get_vv_sequence_length(guessed_z))
+                                           sequence_length=self.get_vv_sequence_length(guessed_z))
         # Apply masking for visit sequences
         vv_out_mask = tf.tile(self.vv_out_mask, [1, 1, self.rnn_hidden[-1]])
         output = tf.reshape(tf.boolean_mask(rnn_outputs, vv_out_mask), [-1, self.rnn_hidden[-1]])
-        weight, bias = self._weight_and_bias(self.rnn_hidden[-1], n_classes)
+        weight, bias = self.get_time_weight_and_bias(self.rnn_hidden[-1], self.n_classes)
 
         # Flatten to apply same weights to all time steps
-        output = tf.reshape(output, [-1, self.rnn_hidden[-1]])
-        self.y = tf.nn.softmax(tf.matmul(output, weight) + bias)
-        self.y_class = tf.argmax(self.y, 1)
-
-        # last_output = self._last_relevant(rnn_outputs, self.length(guessed_z))
-        # self.y_last = tf.nn.softmax(tf.matmul(last_output, weight) + bias)
-        # self.y_last_class = tf.argmax(self.y_last, 1)
+        if is_time_dis:
+            output = tf.reshape(output, [-1, self.rnn_hidden[-1]])
+            self.y = tf.nn.softmax(tf.matmul(output, weight) + bias)
+            self.y_class = tf.argmax(self.y, 1)
+        else:
+            last_output = self.get_last_rnn_output(rnn_outputs, self.get_vv_sequence_length(guessed_z))
+            self.y_last = tf.nn.softmax(tf.matmul(last_output, weight) + bias)
+            self.y_last_class = tf.argmax(self.y_last, 1)
 
         # Auxiliary task loss
         sup_loss = tf.reduce_mean(tf.losses.softmax_cross_entropy(logits=self.y, onehot_labels=self.vv_outputs))
@@ -203,6 +204,21 @@ class MedGraph:
         length = tf.reduce_sum(used, 1)
         length = tf.cast(length, self.INT_TYPE)
         return length
+
+    def get_last_rnn_output(self, output, length):
+        batch_size = tf.cast(tf.shape(output)[0], self.INT_TYPE)
+        max_length = tf.cast(tf.shape(output)[1], self.INT_TYPE)
+        output_size = tf.cast(tf.shape(output)[2], self.INT_TYPE)
+        index = tf.range(0, batch_size) * max_length + (length - 1)
+        flat = tf.reshape(output, [-1, output_size])
+        relevant = tf.gather(flat, index)
+        return relevant
+
+    @staticmethod
+    def get_time_weight_and_bias(in_size, out_size):
+        weight = tf.truncated_normal([in_size, out_size], stddev=0.01)
+        bias = tf.constant(0.1, shape=[out_size])
+        return tf.Variable(weight), tf.Variable(bias)
 
     def energy_kl(self, u_i, u_j):
         embedding = tf.concat(self.embedding, axis=0)
