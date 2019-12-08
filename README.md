@@ -22,9 +22,9 @@ MedGraph can be trained for either a predictive healthcare task to output future
 * [NetworkX 2.3](https://networkx.github.io)
 
 ### Running MedGraph script
-``
+```
 python train.py dataset --embedding_dim=128 --vc_batch_size=128 --vv_batch_size=32 --K=10 --num_epochs=10 --learning_rate=0.001 --is_gauss=True --distance=w2 --is_time_dis=True
-``
+```
 
 ## 2-D visualisation of the code embeddings learned from MedGraph
 
