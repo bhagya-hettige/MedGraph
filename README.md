@@ -40,7 +40,10 @@ python train.py dataset --embedding_dim=128 --vc_batch_size=128 --vv_batch_size=
 
 ### MedGraph embeddings
 
-Visit and code embeddings of MedGraph are saved in `emb` folder.
+Visit and code embeddings for test EMR are saved in `emb` directory as a dictionary in a numpy file (`.npy`). We can use the `ent2vtx_test` mapping dictionary to find the corresponding embedding representations of the visits and codes.
+
+* If we learn Gaussian embeddings, `mu` gives the mean vector embeddings and `sigma` gives the diagonal co-variance vector
+* If we learn point vector embeddings, the embedding dictionary gives the corresponding vector embeddings of the visits and codes
 
 ## 2-D visualisation of the code embeddings learned from MedGraph
 
