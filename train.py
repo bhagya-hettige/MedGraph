@@ -113,6 +113,16 @@ def train(args):
             test_precision = precision_score(data_loader.vv_test_seq[1][:, 1], np.argmax(y_pred_test, 1))
             test_recall = recall_score(data_loader.vv_test_seq[1][:, 1], np.argmax(y_pred_test, 1))
 
+            # Save visit and code embeddings for test data (we use the same mapping dictionary)
+            if args.is_gauss:
+                mu, sigma = sess.run([model.embedding, model.sigma], feed_dict=feed_dict_test)
+                np.save('emb/%s_embedding.pkl' % args.dataset,
+                        {'mu': data_loader.embedding_mapping(mu),
+                         'sigma': data_loader.embedding_mapping(sigma)})
+            else:
+                mu = sess.run(model.embedding, feed_dict=feed_dict_test)
+                np.save('emb/%s_embedding.pkl' % args.dataset, data_loader.embedding_mapping(mu))
+
             print('---------------------------------------------------------')
             print(
                 "Epoch: {0}, validation auc: {1:.01%}, validation ap: {2:.01%}, test auc: {3:.4f}, test ap: {4:.4f}, test precision: {5:.4f}, test recall: {6:.4f}".format(

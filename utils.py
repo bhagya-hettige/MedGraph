@@ -170,7 +170,8 @@ class DataLoader:
         return shuffled_data
 
     def embedding_mapping(self, embedding):
-        return {node: embedding[self.node_index[node]] for node, _ in self.nodes}
+        return {node: embedding[0][node] if node < self.X_visits_test.shape[0] else embedding[1][
+            node - self.X_visits_test.shape[0]] for node in self.ent2vtx_test.values()}
 
 
 def sparse_feeder(M):
