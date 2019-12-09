@@ -2,7 +2,7 @@
 
 ## Running MedGraph
 
-MedGraph can be trained for either a predictive healthcare task to output future medical risks or an unsupervised model to obtain visit and code embeddings.
+MedGraph can be used either as a predictive healthcare model to output future medical risks or an unsupervised EMR embedding model to obtain visit and code embeddings.
 
 ### System requirements
 
