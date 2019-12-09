@@ -1,6 +1,16 @@
 # MedGraph: Structural and Temporal Representation Learning of Electronic Medical Records
 
-## Input data format for MedGraph
+## Running MedGraph
+
+MedGraph can be trained for either a predictive healthcare task to output future medical risks or an unsupervised model to obtain visit and code embeddings.
+
+### System requirements
+
+* [Python 3.6](https://www.python.org)
+* [Tensorflow 1.14](https://www.tensorflow.org)
+* [NetworkX 2.3](https://networkx.github.io)
+
+### Input data format for MedGraph
 
 MedGraph expects a numpy compressed file (`.npz`) with the following elements in `data` directory:
 
@@ -11,16 +21,6 @@ MedGraph expects a numpy compressed file (`.npz`) with the following elements in
 * VV sequences of training, validation and test sets: `vv_train`, `vv_valid` & `vv_test`, in which we have temporal sequences of visits where each visit event is expressed by "\[visit index, input time, output time, auxiliary task label\]". For example, for each patient we can represent the visit sequence as a list of tuples: `[[v1, t1, t2, y1], [v2, t2, t3, y2], [v3, t3, t4, y3], ...]`. 
 
 Have a look at the `utils.py` file for more details.
-
-## Running MedGraph
-
-MedGraph can be trained for either a predictive healthcare task to output future medical risks or an unsupervised model to obtain visit and code embeddings.
-
-### System requirements
-
-* [Python 3.6](https://www.python.org)
-* [Tensorflow 1.14](https://www.tensorflow.org)
-* [NetworkX 2.3](https://networkx.github.io)
 
 ### Running MedGraph script
 
