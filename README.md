@@ -2,7 +2,7 @@
 
 ## Running MedGraph
 
-MedGraph can be used either as a predictive healthcare model to output future medical risks or an unsupervised EMR embedding model to obtain visit and code embeddings.
+MedGraph can be used either as an end-to-end predictive healthcare model to output future medical risks or an unsupervised EMR embedding model to obtain visit and code embeddings.
 
 ### System requirements
 
