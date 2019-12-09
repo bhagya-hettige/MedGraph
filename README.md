@@ -28,7 +28,7 @@ Have a look at the `utils.py` file for more details.
 python train.py dataset --embedding_dim=128 --vc_batch_size=128 --vv_batch_size=32 --K=10 --num_epochs=10 --learning_rate=0.001 --is_gauss=True --distance=w2 --is_time_dis=True
 ```
 * `dataset`: name of the EMR dataset
-* `embedding_dim`: visit and code embedding dimension
+* `embedding_dim`: visit and code embedding dimension (if we learn Gaussian embeddings, then we learn the mean vectors and diagonal covariance vectors of this embedding dimension)
 * `vc_batch_size`: batch size of VC bipartite edges
 * `vv_batch_size`: batch size of VV event sequences
 * `K`: number of negative VC edges for negative sampling
