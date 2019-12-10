@@ -34,9 +34,9 @@ python train.py dataset --embedding_dim=128 --vc_batch_size=128 --vv_batch_size=
 * `K`: number of negative VC edges for negative sampling
 * `num_epochs`: number of training epochs
 * `learning_rate`: learning rate of the Adam optimizer
-* `is_gauss`: if `True` MedGraph learns Gaussian embeddings for visits and codes, or if `False` MedGraph produces point vector embeddings
+* `is_gauss`: if specified MedGraph learns Gaussian embeddings for visits and codes, or if not specified MedGraph produces point vector embeddings
 * `distance`: if we represent visits and codes as Gaussians, we can define either `w2` (2-nd Wasserstein distance) or `kl` (symmetric KL divergence) as the distance measure
-* `is_time_dis`: if `True` MedGraph makes predictions at each time step of the visit sequence, or if `False` MedGraph makes predictions at the last time step of the visit sequence
+* `time_dis`: if specified MedGraph makes predictions at each time step of the visit sequence, or if not specified MedGraph makes predictions at the last time step of the visit sequence
 
 ### MedGraph embeddings
 

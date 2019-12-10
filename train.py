@@ -17,9 +17,9 @@ def main():
     parser.add_argument('--K', type=int, default=10)
     parser.add_argument('--num_epochs', type=int, default=1000)
     parser.add_argument('--learning_rate', type=float, default=0.001)
-    parser.add_argument('--is_gauss', default=True)
+    parser.add_argument('--gauss', action='store_true')
     parser.add_argument('--distance', default='kl', help='kl or w2')
-    parser.add_argument('--is_time_dis', default=True)
+    parser.add_argument('--time_dis', action='store_true')
     args = parser.parse_args()
     args.is_gauss = True if args.is_gauss == 'True' else False
     args.is_time_dis = True if args.is_time_dis == 'True' else False
@@ -40,9 +40,9 @@ def train(args):
     data_loader.vc_batch_size = args.vc_batch_size
     data_loader.K = args.K
     data_loader.learning_rate = args.learning_rate
-    data_loader.is_gauss = args.is_gauss
+    data_loader.is_gauss = args.gauss
     data_loader.distance = args.distance
-    data_loader.is_time_dis = args.is_time_dis
+    data_loader.is_time_dis = args.time_dis
 
     model = MedGraph(data_loader)
 
