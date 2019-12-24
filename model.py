@@ -194,7 +194,7 @@ class MedGraph:
         total_loss *= mask
 
         # Average over actual sequence lengths
-        total_loss = tf.reduce_sum(total_loss, axis=1)
+        total_loss = tf.reduce_sum(total_loss, axis=1) / tf.reduce_sum(mask, axis=1)
         vv_loss = -tf.reduce_mean(total_loss)
 
         return vv_loss, sup_loss
