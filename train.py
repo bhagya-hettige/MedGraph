@@ -21,8 +21,8 @@ def main():
     parser.add_argument('--distance', default='kl', help='kl or w2')
     parser.add_argument('--time_dis', action='store_true')
     args = parser.parse_args()
-    args.is_gauss = True if args.is_gauss == 'True' else False
-    args.is_time_dis = True if args.is_time_dis == 'True' else False
+    # args.is_gauss = True if args.is_gauss == 'True' else False
+    # args.is_time_dis = True if args.is_time_dis == 'True' else False
     train(args)
 
 
