@@ -84,7 +84,7 @@ def train(args):
                     tot_loss += loss
 
                 print("Epoch {:3d}:\t Training loss: {:.4f}\t Time taken: {:.4f}sec".format(epoch + 1,
-                                                                                          tot_loss / (epoch + 1),
+                                                                                          tot_loss / num_iter,
                                                                                           time.time() - start_time))
 
                 # Run validation and test after every epoch
