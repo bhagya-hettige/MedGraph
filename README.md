@@ -25,7 +25,7 @@ Have a look at the `utils.py` file for more details.
 ### Running MedGraph script
 
 ```
-python train.py dataset --embedding_dim=128 --vc_batch_size=128 --vv_batch_size=32 --K=10 --num_epochs=10 --learning_rate=0.001 --is_gauss=True --distance=w2 --is_time_dis=True
+python train.py dataset --embedding_dim=128 --vc_batch_size=128 --vv_batch_size=32 --K=10 --num_epochs=10 --learning_rate=0.001 --gauss --distance=w2 --time_dis
 ```
 * `dataset`: name of the EMR dataset
 * `embedding_dim`: visit and code embedding dimension (if we learn Gaussian embeddings, then we learn the mean vectors and diagonal covariance vectors of this embedding dimension)
@@ -34,7 +34,7 @@ python train.py dataset --embedding_dim=128 --vc_batch_size=128 --vv_batch_size=
 * `K`: number of negative VC edges for negative sampling
 * `num_epochs`: number of training epochs
 * `learning_rate`: learning rate of the Adam optimizer
-* `is_gauss`: if specified MedGraph learns Gaussian embeddings for visits and codes, or if not specified MedGraph produces point vector embeddings
+* `gauss`: if specified MedGraph learns Gaussian embeddings for visits and codes, or if not specified MedGraph produces point vector embeddings
 * `distance`: if we represent visits and codes as Gaussians, we can define either `w2` (2-nd Wasserstein distance) or `kl` (symmetric KL divergence) as the distance measure
 * `time_dis`: if specified MedGraph makes predictions at each time step of the visit sequence, or if not specified MedGraph makes predictions at the last time step of the visit sequence
 
