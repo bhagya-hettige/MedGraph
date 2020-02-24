@@ -83,7 +83,6 @@ def train(args):
                     loss, _ = sess.run([model.loss, model.train_op], feed_dict=feed_dict_batch)
                     tot_loss += loss
 
-                print('----------------------------------------------------------------------------------------------------------------------------------')
                 print("Epoch {:3d}:\t Training loss: {:.4f}\t Time taken: {:.4f}sec".format(epoch + 1,
                                                                                           tot_loss / (epoch + 1),
                                                                                           time.time() - start_time))
