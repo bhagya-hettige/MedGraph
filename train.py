@@ -92,29 +92,29 @@ def train(args):
             # Predict for validation set
             feed_dict_valid = {model.X_visits: sparse_feeder(data_loader.X_visits_val),
                                model.vv_inputs: data_loader.vv_valid_seq[0],
-                               model.vv_in_time: data_loader.vv_valid_seq[2],
-                               model.vv_out_time: data_loader.vv_valid_seq[3],
-                               model.vv_out_mask: data_loader.vv_valid_seq[4]}
+                               model.vv_in_time: data_loader.vv_valid_seq[1],
+                               model.vv_out_time: data_loader.vv_valid_seq[2],
+                               model.vv_out_mask: data_loader.vv_valid_seq[3]}
             y_pred_valid = sess.run(model.y, feed_dict=feed_dict_valid)
             # Calculate validation set evaluation metrics
-            val_auc = roc_auc_score(y_true=data_loader.vv_valid_seq[1], y_score=y_pred_valid)
-            val_ap = average_precision_score(y_true=data_loader.vv_valid_seq[1], y_score=y_pred_valid)
+            val_auc = roc_auc_score(y_true=data_loader.vv_valid_seq[4], y_score=y_pred_valid)
+            val_ap = average_precision_score(y_true=data_loader.vv_valid_seq[4], y_score=y_pred_valid)
 
             # Predict for test set
             feed_dict_test = {model.X_visits: sparse_feeder(data_loader.X_visits_test),
                               model.vv_inputs: data_loader.vv_test_seq[0],
-                              model.vv_in_time: data_loader.vv_test_seq[2],
-                              model.vv_out_time: data_loader.vv_test_seq[3],
-                              model.vv_out_mask: data_loader.vv_test_seq[4]}
+                              model.vv_in_time: data_loader.vv_test_seq[1],
+                              model.vv_out_time: data_loader.vv_test_seq[2],
+                              model.vv_out_mask: data_loader.vv_test_seq[3]}
             y_pred_test = sess.run(model.y, feed_dict=feed_dict_test)
             # Calculate test set evaluation metrics
-            test_auc = roc_auc_score(y_true=data_loader.vv_test_seq[1], y_score=y_pred_test)
-            test_ap = average_precision_score(y_true=data_loader.vv_test_seq[1], y_score=y_pred_test)
-            test_precision = precision_score(data_loader.vv_test_seq[1][:, 1], np.argmax(y_pred_test, 1))
-            test_recall = recall_score(data_loader.vv_test_seq[1][:, 1], np.argmax(y_pred_test, 1))
+            test_auc = roc_auc_score(y_true=data_loader.vv_test_seq[4], y_score=y_pred_test)
+            test_ap = average_precision_score(y_true=data_loader.vv_test_seq[4], y_score=y_pred_test)
+            test_precision = precision_score(data_loader.vv_test_seq[4][:, 1], np.argmax(y_pred_test, 1))
+            test_recall = recall_score(data_loader.vv_test_seq[4][:, 1], np.argmax(y_pred_test, 1))
 
             # Save visit and code embeddings for test data (we use the same mapping dictionary)
-            if args.is_gauss:
+            if args.gauss:
                 mu, sigma = sess.run([model.embedding, model.sigma], feed_dict=feed_dict_test)
                 np.save('emb/%s_embedding.npy' % args.dataset,
                         {'mu': data_loader.embedding_mapping(mu),
