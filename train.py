@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import argparse
+import time
 
 from sklearn.metrics import roc_auc_score, average_precision_score, precision_score, recall_score
 
@@ -21,8 +22,6 @@ def main():
     parser.add_argument('--distance', default='kl', help='kl or w2')
     parser.add_argument('--time_dis', action='store_true')
     args = parser.parse_args()
-    # args.is_gauss = True if args.is_gauss == 'True' else False
-    # args.is_time_dis = True if args.is_time_dis == 'True' else False
     train(args)
 
 
@@ -66,7 +65,6 @@ def train(args):
                     # Fetch vv sequences for the current batch
                     (batch_vv_inputs, batch_time_train_in, batch_time_train_out, batch_out_mask,
                      batch_vv_outputs) = data_loader.fetch_vv_batch(data, start, end)
-                    # print((batch_vv_inputs, batch_time_train_in, batch_time_train_out, batch_out_mask, batch_vv_outputs))
 
                     # Fetch vc edges for the current batch
                     (vc_u_i, vc_u_j, vc_label) = data_loader.fetch_vc_batch(batch_size=args.vc_batch_size, K=args.K)
@@ -113,8 +111,6 @@ def train(args):
                 # Calculate test set evaluation metrics
                 test_auc = roc_auc_score(y_true=data_loader.vv_test_seq[4], y_score=y_pred_test)
                 test_ap = average_precision_score(y_true=data_loader.vv_test_seq[4], y_score=y_pred_test)
-                # test_precision = precision_score(data_loader.vv_test_seq[4][:, 1], np.argmax(y_pred_test, 1))
-                # test_recall = recall_score(data_loader.vv_test_seq[4][:, 1], np.argmax(y_pred_test, 1))
 
                 # Save visit and code embeddings for test data (we use the same mapping dictionary)
                 if args.gauss:
