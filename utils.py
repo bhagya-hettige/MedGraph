@@ -122,7 +122,7 @@ class DataLoader:
             for i in range(K):
                 while True:
                     negative_node = self.node_sampling.sampling()
-                    if not self.vc_graph.has_edge(negative_node, edge[1]):
+                    if not self.vc_graph.has_edge(negative_node, edge[0]):
                         break
                 u_i.append(edge[0])
                 u_j.append(negative_node)
