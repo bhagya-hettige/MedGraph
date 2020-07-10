@@ -8,9 +8,9 @@ seed = 46
 class MedGraph:
     def __init__(self, data_loader):
         # Hyperparameters
-        alpha = 1.0
-        beta = 1.0
-        gamma = 1.0
+        alpha = data_loader.alpha
+        beta = data_loader.beta
+        gamma = data_loader.gamma
 
         # Set seed for reproducibility
         tf.set_random_seed(seed)
@@ -28,6 +28,7 @@ class MedGraph:
         self.n_classes = data_loader.n_classes
         self.n_hidden = [512]
         self.rnn_hidden = [128]
+        self.log_eps = 1e-8
 
         self.X_visits = tf.sparse_placeholder(name='X_visits', dtype=self.FLOAT_TYPE)
         self.X = [self.X_visits, tf.SparseTensor(*sparse_feeder(data_loader.X_codes))]
@@ -64,7 +65,7 @@ class MedGraph:
 
         L_temp, L_aux = self.__temporal_loss(data_loader.is_gauss, data_loader.is_time_dis)
 
-        self.loss = alpha * L_struc + beta * 1e-4 * L_temp + gamma * L_aux + 1e-5 * L_reg
+        self.loss = alpha * L_struc + beta * L_temp + gamma * L_aux + 1e-5 * L_reg
 
         self.optimizer = tf.train.AdamOptimizer(learning_rate=data_loader.learning_rate)
         self.train_op = self.optimizer.minimize(self.loss)
@@ -127,9 +128,10 @@ class MedGraph:
         if is_gauss:
             eps = tf.random_normal(shape=tf.shape(self.sigma[0]), mean=0, stddev=1, dtype=self.FLOAT_TYPE)
             z = self.embedding[0] + tf.sqrt(tf.exp(self.sigma[0])) * eps
+            guessed_z = tf.gather(z, self.vv_inputs)
         else:
-            z = tf.gather(self.embedding[0], self.vv_inputs)
-        guessed_z = tf.gather(z, self.vv_inputs)
+            guessed_z = tf.gather(self.embedding[0], self.vv_inputs)
+
         # Apply masking for padded visits
         vv_in_mask = tf.tile(self.vv_out_mask, [1, 1, self.L])
         comparison = tf.equal(vv_in_mask, tf.constant(0))
@@ -138,7 +140,10 @@ class MedGraph:
         # Calculate time gaps between consecutive visits
         last_time = tf.concat([tf.zeros([batch_size, 1], dtype=self.FLOAT_TYPE), self.vv_in_time[:, :-1]], axis=1)
         delta_t_prev = tf.expand_dims(self.vv_in_time - last_time, -1)
+        delta_t_prev = tf.math.log(tf.nn.relu(delta_t_prev) + self.log_eps)
+
         delta_t_next = tf.expand_dims(self.vv_out_time - self.vv_in_time, -1)
+        delta_t_next = tf.math.log(tf.nn.relu(delta_t_next) + self.log_eps)
 
         # Append time gap information at the end of the marker information
         guessed_z = tf.concat([guessed_z, delta_t_prev], axis=2)
@@ -164,14 +169,13 @@ class MedGraph:
         if is_time_dis:
             output = tf.reshape(output, [-1, self.rnn_hidden[-1]])
             self.y = tf.nn.softmax(tf.matmul(output, weight) + bias)
-            self.y_class = tf.argmax(self.y, 1)
         else:
             last_output = self.get_last_rnn_output(rnn_outputs, self.get_vv_sequence_length(guessed_z))
-            self.y_last = tf.nn.softmax(tf.matmul(last_output, weight) + bias)
-            self.y_last_class = tf.argmax(self.y_last, 1)
+            self.y = tf.nn.softmax(tf.matmul(last_output, weight) + bias)
 
         # Auxiliary task loss
-        sup_loss = tf.reduce_mean(tf.losses.softmax_cross_entropy(logits=self.y, onehot_labels=self.vv_outputs))
+        sup_loss = tf.reduce_mean(-((self.vv_outputs * tf.math.log(self.y + self.log_eps)) +
+                                    ((1 - self.vv_outputs) * tf.math.log(1 - self.y + self.log_eps))))
 
         # Temporal loss based on marked point processes
         rnn_outputs_shape = tf.shape(rnn_outputs)
@@ -182,19 +186,20 @@ class MedGraph:
         self.w_t = tf.get_variable('wt', (1), initializer=tf.constant_initializer(1.0))
         self.b_t = tf.get_variable('bt', (1), initializer=tf.constant_initializer(np.log(1.0)))
 
-        wt = tf.nn.softplus(self.w_t)
         delta_t_next = tf.reshape(delta_t_next, [-1, 1])
-        part1 = tf.matmul(rnn_outputs, self.W_t) + self.b_t
-        part2 = (-wt * delta_t_next)
-        time_loglike = part1 + part2 + (tf.exp(tf.minimum(50.0, part1 + part2)) - tf.exp(tf.minimum(50.0, part1))) / wt
-        total_loss = time_loglike
+
+        tv1 = tf.matmul(rnn_outputs, self.W_t) + self.b_t
+        tv2 = tv1 + self.w_t * delta_t_next
+        tv3 = (1 / self.w_t) * tf.exp(tv1)
+        tv4 = (1 / self.w_t) * tf.exp(tv2)
+        total_loss = -tf.exp(tf.minimum(tv2 + tv3 - tv4, 10.0))
 
         # Apply masking for variable length visit sequences
         total_loss = tf.reshape(total_loss, [batch_size, -1])
         total_loss *= mask
 
         # Average over actual sequence lengths
-        total_loss = tf.reduce_sum(total_loss, axis=1)
+        total_loss = tf.reduce_sum(total_loss, axis=1) / tf.reduce_sum(mask, axis=1)
         vv_loss = -tf.reduce_mean(total_loss)
 
         return vv_loss, sup_loss

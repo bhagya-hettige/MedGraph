@@ -8,19 +8,14 @@ class DataLoader:
         with np.load(graph_file, allow_pickle=True) as loader:
             loader = dict(loader)
 
-            # vc graph
-            self.A = sp.csr_matrix((loader['adj_data_vc'], loader['adj_indices_vc'],
-                                    loader['adj_indptr_vc']), shape=loader['adj_shape_vc'])
+            # vc graph for training visits
+            self.A = loader['A_vc'].item()
 
             # vc node attributes
-            self.X_visits_train = sp.csr_matrix((loader['visit_attr_data'], loader['visit_attr_indices'],
-                                                 loader['visit_attr_indptr']), shape=loader['visit_attr_shape'])
-            self.X_codes = sp.csr_matrix((loader['code_attr_data'], loader['code_attr_indices'],
-                                          loader['code_attr_indptr']), shape=loader['code_attr_shape'])
-            self.X_visits_val = sp.csr_matrix((loader['attr_data_val'], loader['attr_indices_val'],
-                                               loader['attr_indptr_val']), shape=loader['attr_shape_val'])
-            self.X_visits_test = sp.csr_matrix((loader['attr_data_test'], loader['attr_indices_test'],
-                                                loader['attr_indptr_test']), shape=loader['attr_shape_test'])
+            self.X_codes = loader['X_codes'].item()
+            self.X_visits_train = loader['X_visits_train'].item()
+            self.X_visits_val = loader['X_visits_valid'].item()
+            self.X_visits_test = loader['X_visits_test'].item()
 
             # vv sequences
             self.vv_train = loader['vv_train']
@@ -56,7 +51,7 @@ class DataLoader:
         max_seq_train = max([len(x) for x in self.vv_train])
         max_seq_valid = max([len(x) for x in self.vv_valid])
         max_seq_test = max([len(x) for x in self.vv_test])
-        self.n_classes = np.max(self.vv_train[:, 3]) + 1
+        self.n_classes = len(self.vv_train[0][0][3])
 
         vv_inputs = np.empty((len(self.vv_train), max_seq_train))
         vv_outputs = []
@@ -66,7 +61,7 @@ class DataLoader:
         for i, x in enumerate(self.vv_train):
             x = np.array([np.array(y) for y in x])
             vv_inputs[i] = np.pad(x[:, 0], (0, max_seq_train - len(x)), 'constant', constant_values=0)
-            vv_outputs.append(np.eye(self.n_classes)[x[:, 3].astype(np.int)])
+            vv_outputs.append(x[:, 3])
             vv_in_time[i] = np.pad(x[:, 1], (0, max_seq_train - len(x)), 'constant', constant_values=-1)
             vv_out_time[i] = np.pad(x[:, 2], (0, max_seq_train - len(x)), 'constant', constant_values=0)
             output_mask[i] = np.pad([idx + 1 for idx in range(len(x))], (0, max_seq_train - len(x)), 'constant',
@@ -82,7 +77,7 @@ class DataLoader:
         for i, x in enumerate(self.vv_valid):
             x = np.array([np.array(y) for y in x])
             vv_inputs_valid[i] = np.pad(x[:, 0], (0, max_seq_valid - len(x)), 'constant', constant_values=0)
-            vv_outputs_valid.extend(np.eye(self.n_classes)[x[:, 3].astype(np.int)])
+            vv_outputs_valid.extend(x[:, 3])
             vv_in_time_valid[i] = np.pad(x[:, 1], (0, max_seq_valid - len(x)), 'constant', constant_values=-1)
             vv_out_time_valid[i] = np.pad(x[:, 2], (0, max_seq_valid - len(x)), 'constant', constant_values=0)
             output_mask_valid[i] = np.pad([idx + 1 for idx in range(len(x))], (0, max_seq_valid - len(x)), 'constant',
@@ -98,7 +93,7 @@ class DataLoader:
         for i, x in enumerate(self.vv_test):
             x = np.array([np.array(y) for y in x])
             vv_inputs_test[i] = np.pad(x[:, 0], (0, max_seq_test - len(x)), 'constant', constant_values=0)
-            vv_outputs_test.extend(np.eye(self.n_classes)[x[:, 3].astype(np.int)])
+            vv_outputs_test.extend(x[:, 3])
             vv_in_time_test[i] = np.pad(x[:, 1], (0, max_seq_test - len(x)), 'constant', constant_values=-1)
             vv_out_time_test[i] = np.pad(x[:, 2], (0, max_seq_test - len(x)), 'constant', constant_values=0)
             output_mask_test[i] = np.pad([idx + 1 for idx in range(len(x))], (0, max_seq_test - len(x)), 'constant',
@@ -122,7 +117,7 @@ class DataLoader:
             for i in range(K):
                 while True:
                     negative_node = self.node_sampling.sampling()
-                    if not self.vc_graph.has_edge(negative_node, edge[1]):
+                    if not self.vc_graph.has_edge(negative_node, edge[0]):
                         break
                 u_i.append(edge[0])
                 u_j.append(negative_node)

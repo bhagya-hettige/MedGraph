@@ -18,7 +18,7 @@ MedGraph expects a numpy compressed file (`.npz`) with the following elements in
 * Adjacency matrix of VC structural relations in the training set: `A_vc`
 * Visit attribute vector matrices (i.e. patient demographics and hospital utilization) of training, validation and test sets: `X_visits_train`, `X_visits_val` & `X_visits_test`
 * Code attribute vector matrix (i.e. tf-idf vectors of ICD code descriptions or multi-hot ICD ancestors in a higher level): `X_codes`
-* VV sequences of training, validation and test sets: `vv_train`, `vv_valid` & `vv_test`, in which we have temporal sequences of visits where each visit event is expressed by "\[visit index, input time, output time, auxiliary task label\]". For example, for each patient we can represent the visit sequence as a list of tuples: `[[v1, t1, t2, y1], [v2, t2, t3, y2], [v3, t3, t4, y3], ...]`. 
+* VV sequences of training, validation and test sets: `vv_train`, `vv_valid` & `vv_test`, in which we have temporal sequences of visits where each visit event is expressed by "\[visit index, input time, output time, auxiliary task label as one- or multi-hot vector\]". For example, for each patient we can represent the visit sequence as a list of tuples: `[[v1, t1, t2, y1], [v2, t2, t3, y2], [v3, t3, t4, y3], ...]`. 
 
 Have a look at the `utils.py` file for more details.
 
@@ -32,11 +32,17 @@ python train.py dataset --embedding_dim=128 --vc_batch_size=128 --vv_batch_size=
 * `vc_batch_size`: batch size of VC bipartite edges
 * `vv_batch_size`: batch size of VV event sequences
 * `K`: number of negative VC edges for negative sampling
+* `alpha`: hyperparameter for structural loss
+* `beta`: hyperparameter for temporal loss
+* `gamma`: hyperparameter for auxiliary task loss
 * `num_epochs`: number of training epochs
 * `learning_rate`: learning rate of the Adam optimizer
+* `time_dis`: if specified MedGraph makes predictions at each time step of the visit sequence, or if not specified MedGraph makes predictions at the last time step of the visit sequence
+
+If you want to analyse the dataset behaviour using uncertainty modelling:
 * `is_gauss`: if specified MedGraph learns Gaussian embeddings for visits and codes, or if not specified MedGraph produces point vector embeddings
 * `distance`: if we represent visits and codes as Gaussians, we can define either `w2` (2-nd Wasserstein distance) or `kl` (symmetric KL divergence) as the distance measure
-* `time_dis`: if specified MedGraph makes predictions at each time step of the visit sequence, or if not specified MedGraph makes predictions at the last time step of the visit sequence
+
 
 ### MedGraph embeddings
 
