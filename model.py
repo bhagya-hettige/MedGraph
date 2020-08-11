@@ -65,7 +65,7 @@ class MedGraph:
 
         L_temp, L_aux = self.__temporal_loss(data_loader.is_gauss, data_loader.is_time_dis)
 
-        self.loss = alpha * L_struc + beta * L_temp + gamma * L_aux + 1e-5 * L_reg
+        self.loss = alpha * L_struc + beta * L_temp + gamma * L_aux  # + 1e-5 * L_reg
 
         self.optimizer = tf.train.AdamOptimizer(learning_rate=data_loader.learning_rate)
         self.train_op = self.optimizer.minimize(self.loss)
